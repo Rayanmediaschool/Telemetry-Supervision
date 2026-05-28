@@ -1,0 +1,12 @@
+# ── PROVISIONING DASHBOARDS ───────────────────────────────
+# Ce fichier indique à Grafana où trouver les fichiers JSON
+# de dashboards à charger automatiquement au démarrage.
+# Tout fichier JSON déposé dans le dossier grafana/dashboards/
+# sera automatiquement importé sans action manuelle.
+apiVersion: 1
+providers:
+  - name: default
+    folder: ''          # Dossier Grafana dans lequel ranger les dashboards
+    type: file          # Les dashboards sont des fichiers (pas une base de données)
+    options:
+      path: /var/lib/grafana/dashboards   # Chemin dans le conteneur Grafana

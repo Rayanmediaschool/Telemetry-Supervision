@@ -1,0 +1,46 @@
+# ── CONFIGURATION GLOBALE ─────────────────────────────────
+global:
+  resolve_timeout: 5m    # Délai avant de considérer une alerte comme résolue
+
+# ── ROUTAGE DES ALERTES ───────────────────────────────────
+# Définit comment les alertes sont distribuées aux receivers.
+# Fonctionne comme un arbre de décision : on regarde les labels
+# de l'alerte pour savoir vers quel receiver l'envoyer.
+route:
+  group_by: ['alertname', 'domain']  # Regroupe les alertes similaires ensemble
+  group_wait: 30s                     # Attend 30s avant d'envoyer le premier groupe
+  group_interval: 5m                  # Délai entre deux notifications du même groupe
+  repeat_interval: 1h                 # Répète l'alerte toutes les heures si non résolue
+  receiver: 'default'                 # Receiver par défaut si aucune route ne correspond
+  routes:
+    # Alertes infrastructure → receiver infra
+    - match:
+        domain: infra
+      receiver: 'infra-receiver'
+    # Alertes capteurs IoT → receiver iot
+    - match:
+        domain: iot
+      receiver: 'iot-receiver'
+    # Alertes microservice → receiver app
+    - match:
+        domain: app
+      receiver: 'app-receiver'
+
+# ── RECEIVERS ─────────────────────────────────────────────
+# Les receivers définissent où envoyer les alertes.
+# Ici on utilise des webhooks locaux (à remplacer par
+# Slack, email, PagerDuty en production).
+receivers:
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:5001/alerts'
+        send_resolved: true     # Notifie aussi quand l'alerte est résolue
+  - name: 'infra-receiver'
+    webhook_configs:
+      - url: 'http://localhost:5001/alerts'
+  - name: 'iot-receiver'
+    webhook_configs:
+      - url: 'http://localhost:5001/alerts'
+  - name: 'app-receiver'
+    webhook_configs:
+      - url: 'http://localhost:5001/alerts'

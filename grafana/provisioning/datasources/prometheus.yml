@@ -1,0 +1,12 @@
+# ── PROVISIONING DATASOURCE ───────────────────────────────
+# Ce fichier configure automatiquement la connexion entre
+# Grafana et Prometheus au démarrage du conteneur.
+# Sans ce fichier, il faudrait le faire manuellement
+# dans l'interface web de Grafana.
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090   # Nom du service Docker, pas localhost
+    isDefault: true               # Datasource utilisée par défaut dans les dashboards
+    access: proxy                 # Grafana fait les requêtes côté serveur (pas le navigateur)

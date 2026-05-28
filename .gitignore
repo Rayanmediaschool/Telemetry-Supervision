@@ -1,0 +1,5 @@
+.env
+mosquitto/data/
+mosquitto/log/
+prometheus_data/
+grafana_data/

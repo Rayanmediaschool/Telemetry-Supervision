@@ -1,0 +1,56 @@
+# ── CONFIGURATION GLOBALE ─────────────────────────────────
+global:
+  scrape_interval: 15s       # Prometheus interroge chaque source toutes les 15 secondes
+  evaluation_interval: 30s   # Les règles d'alerting sont évaluées toutes les 30 secondes
+
+# ── ALERTMANAGER ──────────────────────────────────────────
+# Indique à Prometheus où envoyer les alertes déclenchées.
+# On utilise le nom du service Docker "alertmanager" car ils
+# sont sur le même réseau Docker interne.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# ── RÈGLES D'ALERTING ─────────────────────────────────────
+# Prometheus charge tous les fichiers .yml du dossier rules/
+# Ces fichiers contiennent les seuils qui déclenchent des alertes.
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+# ── CIBLES DE SCRAPING ────────────────────────────────────
+# Liste de toutes les sources que Prometheus va interroger.
+# Chaque "job" correspond à un type de source.
+scrape_configs:
+
+  # Prometheus se surveille lui-même (observabilité interne)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Métriques système de la machine Linux (CPU, RAM, disque...)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Métriques des conteneurs Docker
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  # Métriques des capteurs IoT (converties par Telegraf)
+  - job_name: 'telegraf-iot'
+    static_configs:
+      - targets: ['telegraf:9273']
+
+  # Métriques RED du microservice applicatif
+  - job_name: 'microservice'
+    static_configs:
+      - targets: ['microservice:8000']
+
+  # Métriques des jobs éphémères poussées via Pushgateway
+  # honor_labels = on conserve les labels originaux du job
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
