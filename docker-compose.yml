@@ -143,3 +143,14 @@ services:
 volumes:
   prometheus_data:   # Données Prometheus (métriques historiques)
   grafana_data:      # Données Grafana (utilisateurs, préférences)
+
+  # ── SIMULATEUR IOT ────────────────────────────────────────
+  # Script Python qui simule 4 capteurs physiques.
+  # Publie température, pression, vibration et batterie
+  # en MQTT sur Mosquitto toutes les 5 secondes.
+  simulateur-iot:
+    build: ./simulateur-iot
+    container_name: simulateur-iot
+    restart: unless-stopped
+    depends_on:
+      - mosquitto        # Attend que Mosquitto soit démarré
