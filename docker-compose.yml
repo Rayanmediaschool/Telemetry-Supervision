@@ -6,84 +6,75 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2.0
     container_name: mosquitto
-    restart: unless-stopped        # Redémarre automatiquement sauf si arrêt manuel
+    restart: unless-stopped
     ports:
-      - "1883:1883"                # Port standard MQTT
+      - "1883:1883"
     volumes:
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/data:/mosquitto/data      # Persistance des messages
-      - ./mosquitto/log:/mosquitto/log        # Logs du broker
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
 
   # ── BRIDGE IoT → PROMETHEUS ────────────────────────────────
   # Telegraf fait le pont entre le monde MQTT et Prometheus.
-  # Il souscrit aux topics MQTT, lit les messages JSON des capteurs
-  # et les convertit au format Prometheus (métriques clé=valeur).
   telegraf:
     image: telegraf:1.32
     container_name: telegraf
     restart: unless-stopped
     depends_on:
-      - mosquitto                  # Telegraf attend que Mosquitto soit démarré
+      - mosquitto
     ports:
-      - "9273:9273"                # Port sur lequel Prometheus viendra scraper Telegraf
+      - "9273:9273"
     volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro  # :ro = lecture seule
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
 
   # ── COLLECTE + TSDB ────────────────────────────────────────
   # Prometheus est le coeur du système.
-  # Il scrappe (interroge) toutes les sources toutes les 15s
-  # et stocke les données dans sa base de séries temporelles (TSDB).
   prometheus:
     image: prom/prometheus:v2.54.0
     container_name: prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"                # Interface web Prometheus
+      - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/rules:/etc/prometheus/rules:ro   # Règles d'alerting
-      - prometheus_data:/prometheus                   # Volume persistant pour les données
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=15d'   # Conserve 15 jours d'historique
-      - '--web.enable-lifecycle'               # Permet le rechargement de config à chaud
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
 
   # ── ALERTING ───────────────────────────────────────────────
-  # Alertmanager reçoit les alertes déclenchées par Prometheus
-  # et les route vers le bon canal (infra, IoT, applicatif).
-  # Il gère aussi la déduplication pour éviter le spam d'alertes.
+  # Alertmanager reçoit les alertes et les route par domaine.
   alertmanager:
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     restart: unless-stopped
     ports:
-      - "9093:9093"                # Interface web Alertmanager
+      - "9093:9093"
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 
   # ── EXPORTER OS HÔTE ─────────────────────────────────────
-  # Node Exporter surveille la machine Linux elle-même.
-  # Il expose les métriques système : CPU, RAM, disque, réseau.
-  # Prometheus vient le scraper toutes les 15s.
+  # Node Exporter surveille la machine Linux.
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
     ports:
       - "9100:9100"
-    pid: host                      # Accès aux processus de la machine hôte
+    pid: host
     volumes:
-      - /proc:/host/proc:ro        # Infos processus Linux
-      - /sys:/host/sys:ro          # Infos système Linux
-      - /:/rootfs:ro               # Système de fichiers racine
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
     command:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
 
   # ── EXPORTER DOCKER ──────────────────────────────────────
   # cAdvisor surveille les conteneurs Docker.
-  # Il expose les métriques par conteneur : CPU, mémoire, I/O réseau.
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
@@ -97,10 +88,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
 
   # ── PUSHGATEWAY ──────────────────────────────────────────
-  # Le Pushgateway permet aux jobs éphémères (scripts, cron jobs)
-  # de pousser leurs métriques vers Prometheus.
-  # Contrairement aux autres sources, ces jobs ne tournent pas
-  # en continu donc Prometheus ne peut pas les scraper directement.
+  # Permet aux jobs éphémères de pousser leurs métriques.
   pushgateway:
     image: prom/pushgateway:latest
     container_name: pushgateway
@@ -109,40 +97,29 @@ services:
       - "9091:9091"
 
   # ── VISUALISATION ─────────────────────────────────────────
-  # Grafana est l'interface de visualisation.
-  # Il se connecte à Prometheus et affiche les données
-  # sous forme de dashboards configurables.
+  # Grafana affiche les données sous forme de dashboards.
   grafana:
     image: grafana/grafana:11.2.0
     container_name: grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"                # Interface web Grafana
+      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}        # Injecté depuis .env
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD} # Injecté depuis .env
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro  # Config automatique
-      - ./grafana/dashboards:/var/lib/grafana/dashboards     # Fichiers JSON des dashboards
-      - grafana_data:/var/lib/grafana                        # Données persistantes
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
 
   # ── MICROSERVICE DEMO ─────────────────────────────────────
-  # Une mini application FastAPI (Python) qu'on instrumente
-  # pour exposer des métriques RED (Rate, Errors, Duration).
-  # Prometheus vient scraper son endpoint /metrics.
+  # Mini application FastAPI qui expose des métriques RED.
   microservice:
-    build: ./microservice          # Construit l'image depuis le Dockerfile local
+    build: ./microservice
     container_name: microservice
     restart: unless-stopped
     ports:
       - "8000:8000"
-
-# ── VOLUMES PERSISTANTS ───────────────────────────────────
-# Les volumes Docker permettent de conserver les données
-# même si les conteneurs sont supprimés et recréés.
-volumes:
-  prometheus_data:   # Données Prometheus (métriques historiques)
-  grafana_data:      # Données Grafana (utilisateurs, préférences)
 
   # ── SIMULATEUR IOT ────────────────────────────────────────
   # Script Python qui simule 4 capteurs physiques.
@@ -153,4 +130,11 @@ volumes:
     container_name: simulateur-iot
     restart: unless-stopped
     depends_on:
-      - mosquitto        # Attend que Mosquitto soit démarré
+      - mosquitto
+
+# ── VOLUMES PERSISTANTS ───────────────────────────────────
+# Les volumes Docker permettent de conserver les données
+# même si les conteneurs sont supprimés et recréés.
+volumes:
+  prometheus_data:   # Données Prometheus (métriques historiques)
+  grafana_data:      # Données Grafana (utilisateurs, préférences)
