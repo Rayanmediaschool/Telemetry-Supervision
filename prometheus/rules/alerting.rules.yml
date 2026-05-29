@@ -1,0 +1,145 @@
+groups:
+
+  # ── DOMAINE INFRASTRUCTURE ────────────────────────────────
+  - name: infra
+    rules:
+
+      # 1. CPU de la machine hôte trop élevé
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+          domain: infra
+        annotations:
+          summary: "CPU élevé sur {{ $labels.instance }}"
+          description: "Le CPU dépasse 85% depuis 2 minutes : {{ $value }}%"
+
+      # 2. Mémoire RAM presque pleine
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+          domain: infra
+        annotations:
+          summary: "Mémoire élevée sur {{ $labels.instance }}"
+          description: "La RAM dépasse 85% d'utilisation : {{ $value }}%"
+
+      # 3. Disque presque plein
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: critical
+          domain: infra
+        annotations:
+          summary: "Disque presque plein sur {{ $labels.instance }}"
+          description: "Le disque dépasse 80% d'utilisation : {{ $value }}%"
+
+      # 4. Machine hôte injoignable
+      - alert: HostDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          domain: infra
+        annotations:
+          summary: "Machine hôte injoignable"
+          description: "Node Exporter ne répond plus depuis 1 minute"
+
+      # 5. Conteneur Docker arrêté
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name!=""})
+        for: 1m
+        labels:
+          severity: warning
+          domain: infra
+        annotations:
+          summary: "Conteneur Docker arrêté"
+          description: "Un conteneur Docker ne répond plus"
+
+  # ── DOMAINE IOT ───────────────────────────────────────────
+  - name: iot
+    rules:
+
+      # 6. Température capteur trop élevée
+      - alert: SensorHighTemperature
+        expr: mqtt_consumer_temperature > 30
+        for: 1m
+        labels:
+          severity: warning
+          domain: iot
+        annotations:
+          summary: "Température élevée capteur {{ $labels.device_id }}"
+          description: "Température : {{ $value }}°C sur {{ $labels.location }}"
+
+      # 7. Batterie capteur faible
+      - alert: SensorLowBattery
+        expr: mqtt_consumer_batterie < 20
+        for: 1m
+        labels:
+          severity: warning
+          domain: iot
+        annotations:
+          summary: "Batterie faible capteur {{ $labels.device_id }}"
+          description: "Batterie à {{ $value }}% sur {{ $labels.location }}"
+
+      # 8. Vibration excessive
+      - alert: SensorHighVibration
+        expr: mqtt_consumer_vibration > 1.5
+        for: 30s
+        labels:
+          severity: critical
+          domain: iot
+        annotations:
+          summary: "Vibration excessive capteur {{ $labels.device_id }}"
+          description: "Vibration : {{ $value }}g sur {{ $labels.location }}"
+
+      # 9. Capteur injoignable (plus de données reçues)
+      - alert: SensorDown
+        expr: absent(mqtt_consumer_temperature)
+        for: 2m
+        labels:
+          severity: critical
+          domain: iot
+        annotations:
+          summary: "Aucune donnée capteur IoT reçue"
+          description: "Telegraf ne reçoit plus de données MQTT depuis 2 minutes"
+
+  # ── DOMAINE APPLICATIF ────────────────────────────────────
+  - name: app
+    rules:
+
+      # 10. Taux d'erreur microservice trop élevé
+      - alert: HighErrorRate
+        expr: rate(http_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          domain: app
+        annotations:
+          summary: "Taux d'erreur élevé sur le microservice"
+          description: "Plus de 0.1 erreur/seconde depuis 2 minutes"
+
+      # 11. Latence p95 trop élevée
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+          domain: app
+        annotations:
+          summary: "Latence élevée sur le microservice"
+          description: "Le p95 de latence dépasse 2 secondes : {{ $value }}s"
+
+      # 12. Microservice injoignable
+      - alert: MicroserviceDown
+        expr: up{job="microservice"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          domain: app
+        annotations:
+          summary: "Microservice injoignable"
+          description: "Le microservice ne répond plus depuis 1 minute"
