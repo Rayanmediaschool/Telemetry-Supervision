@@ -1,0 +1,74 @@
+{
+  "title": "IoT Capteurs",
+  "uid": "iot",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "title": "Temperature par capteur (°C)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "targets": [{
+        "expr": "mqtt_consumer_temperature",
+        "legendFormat": "{{device_id}} - {{location}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "celsius"}}
+    },
+    {
+      "title": "Batterie par capteur (%)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "targets": [{
+        "expr": "mqtt_consumer_batterie",
+        "legendFormat": "{{device_id}} - {{location}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}}
+    },
+    {
+      "title": "Pression atmospherique (hPa)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "targets": [{
+        "expr": "mqtt_consumer_pression",
+        "legendFormat": "{{device_id}} - {{location}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "pressurehpa"}}
+    },
+    {
+      "title": "Vibration par capteur (g)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "targets": [{
+        "expr": "mqtt_consumer_vibration",
+        "legendFormat": "{{device_id}} - {{location}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "accMS2"}}
+    },
+    {
+      "title": "Etat batterie actuel",
+      "type": "gauge",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "id": 5,
+      "targets": [{
+        "expr": "mqtt_consumer_batterie",
+        "legendFormat": "{{device_id}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100, "unit": "percent",
+          "thresholds": {
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 20},
+              {"color": "green", "value": 50}
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
