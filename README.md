@@ -12,6 +12,7 @@ Elle collecte, stocke, visualise et alerte sur les métriques de trois domaines 
 - **Applicatif** — microservice FastAPI instrumenté avec la méthode RED
 
 ## Architecture
+```
 
 Capteurs IoT (simulés)
 ↓ MQTT
@@ -27,6 +28,7 @@ Node Exporter → métriques Linux
 cAdvisor      → métriques Docker
 Microservice  → métriques RED (Rate, Errors, Duration)
 Pushgateway   → métriques jobs éphémères
+```
 
 ## Stack technique
 
@@ -84,6 +86,7 @@ docker compose ps
 | Métriques RED | http://IP_VM:8000/metrics | — |
 
 ## Structure du projet
+```
 
 telemetry-supervision/
 ├── docker-compose.yml          # Déclaration de tous les services
@@ -106,13 +109,14 @@ telemetry-supervision/
 │       └── mosquitto.conf      # Configuration broker MQTT
 ├── microservice/
 │   ├── main.py                 # Application FastAPI + métriques RED
-│   ├── requirements.txt
-│   └── Dockerfile
+    ├── requirements.txt
+    └── Dockerfile
 └── simulateur-iot/
-├── simulator.py            # Simulation de 4 capteurs IoT
-├── requirements.txt
-└── Dockerfile
+    ├── simulator.py            # Simulation de 4 capteurs IoT
+    ├── requirements.txt
+    └── Dockerfile
 
+```
 ## Règles d'alerting
 
 12 règles réparties sur 3 domaines :
