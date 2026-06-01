@@ -17,14 +17,16 @@ Fichier de configuration principal d'Alertmanager.
 | `receivers` | Définit où envoyer les alertes (webhook, Slack, email) |
 
 **Logique de routage** :
-'''
+```
+
 Alerte reçue
 ↓
 Label domain = infra ? → infra-receiver
 Label domain = iot ?   → iot-receiver
 Label domain = app ?   → app-receiver
 Sinon                  → default
-'''
+```
+
 **Paramètres de déduplication** :
 - `group_by` — regroupe les alertes par nom et domaine
 - `group_wait` — attend 30s avant d'envoyer le premier groupe
